@@ -1,0 +1,239 @@
+1
+00:00:01,300 --> 00:00:07,720
+In this video, we are going to implement summation of two arrays with cuda asynchronous functions and then
+
+2
+00:00:07,720 --> 00:00:15,300
+we will look at the performance gain we achieved from overlapping kernel executions and memory transferring.
+
+3
+00:00:15,300 --> 00:00:22,320
+Execution order of operations of our previous sum array implementation, would look like. Due to the blocking nature of
+
+4
+00:00:22,320 --> 00:00:29,340
+cudaMemCpy function call and use of cudaDeviceSynchronize function, arrange memory transfer operation
+
+5
+00:00:29,370 --> 00:00:31,710
+and kernel execution in a sequential line.
+
+6
+00:00:31,740 --> 00:00:37,590
+With CUDA non null streams and asynchronous function calls,
+
+7
+00:00:37,680 --> 00:00:40,330
+this is what we expect to achieve.
+
+8
+00:00:40,440 --> 00:00:46,590
+We are going to divide the input array in to predetermined number of data chunks and then we are going to execute
+
+9
+00:00:46,590 --> 00:00:54,930
+sum array kernel in different streams with one data chunk in each. Ok, let's jump in to the implementation.
+
+10
+00:00:56,040 --> 00:01:04,120
+Here, I have our previous implementation of sum array program. All we do is initializing two input arrays
+
+11
+00:01:04,150 --> 00:01:06,030
+and pass those to device,
+
+12
+00:01:06,160 --> 00:01:12,490
+and then we launch sum array kernel and after kernel execution finish, we transfer the results back to the
+
+13
+00:01:12,490 --> 00:01:14,940
+host and that's it. Now
+
+14
+00:01:15,520 --> 00:01:21,860
+I'm going to change this kernel implementation to launch multiple kernels and memory transfers to be in
+
+15
+00:01:22,000 --> 00:01:24,640
+different streams and to be asynchronous.
+
+16
+00:01:24,680 --> 00:01:26,480
+So let's set number of streams
+
+17
+00:01:26,500 --> 00:01:30,710
+we are going to use here, as the first thing in the main function here.
+
+18
+00:01:30,730 --> 00:01:32,250
+I'm going to use 8 steam,
+
+19
+00:01:32,260 --> 00:01:39,070
+so let's set that. Since we are going to execute summation for only part of the array in single stream
+
+20
+00:01:39,440 --> 00:01:45,040
+we have to set the number of elements are going to processed by each stream and number of bytes required to
+
+21
+00:01:45,040 --> 00:01:46,990
+hold that amount of elements as well.
+
+22
+00:01:47,030 --> 00:01:51,440
+So let's set those variables here as well.
+
+23
+00:01:53,500 --> 00:01:57,800
+To call asynchronous memory copy function, we have to provide pinned memory.
+
+24
+00:01:58,120 --> 00:02:03,170
+So I have to change this memory allocation with malloc function to memory allocations with
+
+25
+00:02:03,200 --> 00:02:05,080
+cudaMallocHost functions.
+
+26
+00:02:12,200 --> 00:02:17,370
+Now we have array initialization and sum array function call in CPU,
+
+27
+00:02:17,670 --> 00:02:18,950
+We are not going to change that,
+
+28
+00:02:19,050 --> 00:02:26,590
+so keep these line as they are. Then we can crate a new streams we are going to use here. Since
+
+29
+00:02:26,650 --> 00:02:28,970
+we are going to have multiple streams
+
+30
+00:02:29,170 --> 00:02:32,140
+we commonly store all these streams in a stream array.
+
+31
+00:02:32,140 --> 00:02:39,760
+Then we can iterate through these arrays while calling cudaStreamCreate function to create cuda
+
+32
+00:02:39,760 --> 00:02:42,590
+stream as each element in the stream array.
+
+33
+00:02:43,080 --> 00:02:48,950
+Ok, now we are going to transfer memory and launch sum array kernel in each stream.
+
+34
+00:02:49,670 --> 00:02:57,170
+So let's first set, block and grid size variables here. Notice grid size is now divided by factor of
+
+35
+00:02:57,170 --> 00:02:58,730
+number of streams as well.
+
+36
+00:02:59,150 --> 00:03:05,520
+Then we are going to iterate number of the stream amount of time while performing asynchronous memory transferring and
+
+37
+00:03:05,540 --> 00:03:08,320
+kernel launches with one stream per iteration.
+
+38
+00:03:08,330 --> 00:03:16,700
+Remember here, we have two input arrays, and we have to calculate offset of elements each stream
+
+39
+00:03:16,820 --> 00:03:18,470
+is going to process.
+
+40
+00:03:18,470 --> 00:03:25,530
+So here, first we have to calculate the element offset for input arrays. Now we can transfer
+
+41
+00:03:25,580 --> 00:03:31,510
+i'th data chunck from both input arrays asynchronously using i'th stream in the stream array.
+
+42
+00:03:31,520 --> 00:03:31,750
+.
+
+43
+00:03:37,190 --> 00:03:43,130
+Then we are going to launch our sum array kernel using i'th stream and we have to provide i'th data chunck
+
+44
+00:03:43,150 --> 00:03:47,850
+from each of these arrays as the input parameters.
+
+45
+00:03:48,130 --> 00:03:54,460
+And finally we can transfer the results back to host asynchronously as well.
+
+46
+00:03:54,710 --> 00:04:00,960
+Notice each of these operations are asynchronous. Which means these operation does not block host execution,
+
+47
+00:04:01,060 --> 00:04:07,640
+So all the kernel launches are happen to each stream almost at the same time.
+
+48
+00:04:07,660 --> 00:04:15,160
+After that we can again iterate through steam array and call cudaSteamDestroy function for each of these streams as well.
+
+49
+00:04:15,250 --> 00:04:23,680
+Then we have cudaDeviceSynchronize function call to wait until all the operations are finished.
+
+50
+00:04:24,010 --> 00:04:27,670
+Ok, let's look at what happen here with nvvp tool.
+
+51
+00:04:29,810 --> 00:04:40,630
+So let me compile this program with nvcc. And run the executable with nvvp.
+
+52
+00:04:40,820 --> 00:04:41,390
+Ok,
+
+53
+00:04:41,390 --> 00:04:45,260
+here we have the output for our program execution.
+
+54
+00:04:45,260 --> 00:04:47,700
+Here you can see that we have 8 streams.
+
+55
+00:04:47,990 --> 00:04:55,700
+And also notice that for each streams memory transfers made to host to device is overlap with kernel executions
+
+56
+00:04:55,880 --> 00:05:00,890
+and memory transfers made to device to host from different streams.
+
+57
+00:05:00,950 --> 00:05:08,660
+Also for any given time memory transferring for one direction is happen only from one stream. Two streams
+
+58
+00:05:08,660 --> 00:05:14,450
+can transfer data simultaneously for different direction, but not in the same direction.
+
+59
+00:05:14,450 --> 00:05:20,450
+In this way we can overlap our kernel execution with memory transfers to minimize overall program
+
+60
+00:05:20,510 --> 00:05:21,340
+execution.

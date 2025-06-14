@@ -1,0 +1,324 @@
+1
+00:00:03,550 --> 00:00:08,630
+From this video onwards, we are going to start our discussion on CUDA streams.
+从这段视频开始，我们将开始讨论CUDA流。
+
+2
+00:00:08,980 --> 00:00:15,430
+So far, our sole purpose was to improve performance of a particular kernel based on CUDA programming
+model, execution model and memory model.
+到目前为止，我们的唯一目的是基于CUDA编程模型、执行模型和内存模型来提高特定内核的性能。
+
+3
+00:00:15,430 --> 00:00:18,570
+But in this section we are going to discuss ways of improving overall program execution by dividing
+workload among multiple kernels and executing those kernels concurrently on a device.
+但在本节中，我们将讨论通过将工作负载分配给多个内核并在设备上并发执行这些内核来提高整体程序执行的方法。
+
+4
+00:00:19,700 --> 00:00:26,390
+So far in this course, we followed strict model for launching a kernel. We first allocate and transfer data
+to the device from the host and then we launch the kernel,
+到目前为止，在本课程中，我们遵循严格的内核启动模型。我们首先分配数据并将数据从主机传输到设备，然后启动内核，
+
+5
+00:00:26,390 --> 00:00:32,990
+and after that we wait until the kernel execution finish using cudaDeviceSynchronize function,
+然后我们等待内核执行完成，使用cudaDeviceSynchronize函数，
+
+6
+00:00:33,110 --> 00:00:40,680
+and then we transfer the results back to the host.
+然后我们将结果传回主机。
+
+7
+00:00:40,680 --> 00:01:01,780
+This is the model we followed so far. Here we achieved the performance by executing one kernel parallel
+on multiple data at the same time.
+这是我们到目前为止遵循的模型。在这里，我们通过在多个数据上同时并行执行一个内核来实现性能。
+
+8
+00:01:01,990 --> 00:01:04,330
+Parallelism we saw here normally refers to as the kernel level parallelism. Parallelism we are going
+to discuss in this section is called grid level parallelism. In grid level parallelism
+我们在这里看到的并行性通常指的是内核级别的并行性。在本节中我们将讨论的并行性称为网格级别的并行性。在网格级别的并行性中，
+
+9
+00:01:04,330 --> 00:01:16,950
+concurrency is achieved by launching multiple kernels to same device simultaneously and overlapping
+memory transfers with kernel execution.
+并发性是通过同时向同一设备启动多个内核并将内存传输与内核执行重叠来实现的。
+
+10
+00:01:16,990 --> 00:01:23,830
+In our previous CUDA programmes, we transferred memory at the beginning of the program.
+在我们之前的CUDA程序中，我们在程序开始时传输内存。
+
+11
+00:01:23,830 --> 00:01:37,310
+But as you may already notice , device has limited amount of resources.
+但是你可能已经注意到，设备的资源是有限的。
+
+12
+00:01:37,450 --> 00:01:41,330
+So it cannot operate on the all the data we pass simultaneously.
+所以它不能同时操作我们传输的所有数据。
+
+13
+00:01:41,620 --> 00:01:48,510
+So what if we partition our data and transfer only partition enough to execute one kernel optimally
+那么如果我们将数据分区并仅传输足够执行一个内核的部分数据，
+
+14
+00:01:48,920 --> 00:01:54,380
+and while that kernel is executing on that partition we transfer another partition of data
+然后当那个内核在那个分区上执行时，我们传输另一个分区的数据
+
+15
+00:01:54,430 --> 00:01:59,800
+and so on. In this way we can overlap kernel execution with memory transferring.
+以此类推。通过这种方式，我们可以将内核执行与内存传输重叠。
+
+16
+00:02:00,310 --> 00:02:03,220
+So overall execution time is going to reduce,
+因此整体执行时间将减少，
+
+17
+00:02:03,280 --> 00:02:09,130
+because of this operation overlapping as shown in this diagram. To achieve this type of overlapping
+由于如图所示的操作重叠。为了实现这种类型的重叠
+
+18
+00:02:09,130 --> 00:02:16,360
+between operations we need a way to launch multiple kernels on the same device and we need a way to transfer
+我们需要一种方法在同一设备上启动多个内核，并且我们需要一种方法来异步传输内存。
+
+19
+00:02:16,360 --> 00:02:18,160
+memory asynchronously.
+内存传输。
+
+20
+00:02:18,670 --> 00:02:23,300
+This is where CUDA streams and asynchronous functions come to our rescue.
+这就是CUDA流和异步函数帮助我们的地方。
+
+21
+00:02:23,680 --> 00:02:32,150
+So let's first look at what is a CUDA stream now. A stream is a sequence of command that execute in order.
+那么现在让我们先看看什么是CUDA流。流是一系列按顺序执行的命令。
+
+22
+00:02:32,680 --> 00:02:37,080
+So within a single stream operations follow strict ordering.
+因此，在单个流中操作遵循严格的顺序。
+
+23
+00:02:37,180 --> 00:02:44,290
+For example, if we put all the partition data chunks data kernels to one stream, then above mention
+例如，如果我们将所有分区的数据块数据内核放入一个流中，那么上述提到的
+
+24
+00:02:44,290 --> 00:02:50,260
+operation overlapping would not be possible. But different streams on the other hand may execute their command
+操作重叠将不可能实现。但是另一方面，不同的流可以不受其他流顺序的限制执行它们的命令。
+
+25
+00:02:50,500 --> 00:02:54,220
+without any kind of ordering with respect to other streams.
+没有任何顺序。
+
+26
+00:02:54,280 --> 00:03:00,910
+So the way to achieve above mention overlapping is to put memory operations and kernel launches for one data
+所以实现上述操作重叠的方法是将一个数据分区的内存操作和内核启动放入一个独特的流中。
+
+27
+00:03:00,910 --> 00:03:07,510
+partition in to a unique stream. We will discuss more in this in upcoming video.
+我们将在接下来的视频中详细讨论这一点。
+
+28
+00:03:07,540 --> 00:03:08,080
+Now,
+现在，
+
+29
+00:03:08,170 --> 00:03:11,320
+let's look at CUDA asynchronous operations.
+让我们看看CUDA异步操作。
+
+30
+00:03:11,680 --> 00:03:18,000
+When we talk about synchronous or asynchronous behaviors of operation in CUDA we have to consider both
+当我们谈论CUDA中操作的同步或异步行为时，我们必须考虑主机和设备的角度。
+
+31
+00:03:18,000 --> 00:03:20,380
+the host and device perspective.
+主机和设备的角度。
+
+32
+00:03:20,680 --> 00:03:26,800
+Let's start the discussion from the host perspective. Function with synchronous behavior relative to the host
+让我们从主机的角度开始讨论。相对于主机，具有同步行为的函数
+
+33
+00:03:26,800 --> 00:03:34,390
+block the host thread until they complete. On the other hand functions with asynchronous behaviors
+会阻塞主机线程直到完成。而具有异步行为的函数
+
+34
+00:03:34,720 --> 00:03:41,230
+return control to the host immediately after being called. For example, in our previous implementations
+在被调用后立即将控制权返回给主机。例如，在我们之前的实现中，
+
+35
+00:03:41,350 --> 00:03:47,340
+memory copy function calls, memory set function calls and cudaDeviceSynchronize function calls were synchronous
+内存复制函数调用、内存设置函数调用和cudaDeviceSynchronize函数调用是同步的
+
+36
+00:03:47,350 --> 00:03:48,450
+function calls.
+函数调用。
+
+37
+00:03:48,640 --> 00:03:54,180
+They block the host code execution. But kernel launches are asynchronous operations
+它们会阻塞主机代码的执行。但内核启动是异步操作，
+
+38
+00:03:54,240 --> 00:04:01,780
+so control was immediately return to the host after kernel launch instruction executed. Host does not has to wait until
+因此内核启动指令执行后立即将控制权返回给主机。主机不必等待内核在设备上的执行完成。
+
+39
+00:04:01,960 --> 00:04:09,190
+kernel execution is finished in the device. Like I mention, synchronous and asynchronous behaviours depend on
+内核执行完成。如我所提到的，函数调用的同步和异步行为取决于
+
+40
+00:04:09,210 --> 00:04:14,130
+whether you looking at function call from host point of view or device point of view.
+你是从主机角度还是设备角度看函数调用。
+
+41
+00:04:15,260 --> 00:04:22,140
+Consider the kernel launch statement in this slide. Here I have launch 3 kernels in different streams
+考虑此幻灯片中的内核启动语句。这里我在不同的流中启动了3个内核
+
+42
+00:04:22,140 --> 00:04:23,260
+from the host.
+从主机。
+
+43
+00:04:23,380 --> 00:04:30,930
+Notice here, we launch second kernel using default stream or null stream. Now from the host point of view
+请注意这里，我们使用默认流或空流启动第二个内核。现在从主机的角度来看，
+
+44
+00:04:31,050 --> 00:04:33,580
+all the kernel launches are asynchronous.
+所有内核启动都是异步的。
+
+45
+00:04:33,780 --> 00:04:40,380
+So host will not wait until any of these kernels are finish unless explicitly wait using synchronize function calls.
+因此主机不会等待任何内核完成，除非显式等待使用同步函数调用。
+
+46
+00:04:40,380 --> 00:04:41,170
+c
+
+47
+00:04:41,360 --> 00:04:49,050
+But from the device point of view, these kernel launches may or may not be executed in device at the same time depending on the
+但是从设备的角度来看，这些内核启动可能会或可能不会同时在设备上执行，具体取决于
+
+48
+00:04:49,050 --> 00:04:51,940
+relationship stream 1 and stream 3 have
+流1和流3与默认流的关系。
+
+49
+00:04:51,960 --> 00:04:53,830
+with the default stream.
+与默认流的关系。
+
+50
+00:04:54,180 --> 00:04:59,730
+So in this case even though these kernel launches are asynchronous relative to the host, but in the device
+因此，在这种情况下，即使这些内核启动相对于主机是异步的，但在设备中
+
+51
+00:04:59,730 --> 00:05:05,920
+these kernel launches may or may not be asynchronous. In a upcoming video,
+这些内核启动可能是或可能不是异步的。在即将到来的视频中，
+
+52
+00:05:06,000 --> 00:05:09,350
+you will see reasoning behind this kind of behaviour as well.
+你也会看到这种行为背后的原因。
+
+53
+00:05:10,220 --> 00:05:18,870
+Ok, let's now see what the null stream is. The null stream is the default stream that kernel launches and data transfers
+好的，现在让我们看看空流是什么。空流是内核启动和数据传输使用的默认流，
+
+54
+00:05:18,900 --> 00:05:19,610
+use
+使用的默认流，
+
+55
+00:05:19,680 --> 00:05:26,930
+if you do not explicitly specify the different stream. In all the examples we seen so far, we did perform CUDA
+如果你没有明确指定不同的流。在我们目前看到的所有示例中，我们在空流中执行了CUDA操作。
+
+56
+00:05:26,930 --> 00:05:29,310
+operations in the NULL stream.
+在空流中执行CUDA操作。
+
+57
+00:05:30,470 --> 00:05:36,750
+Apart from all the things we done so far NULL stream has synchronization relationship with other asynchronous streams,
+除了我们到目前为止做的所有事情，空流与其他异步流有同步关系，
+
+58
+00:05:36,760 --> 00:05:43,680
+so null stream is commonly use as synchronization mechanism multiple streams
+因此空流通常用作同步机制，多个流
+
+59
+00:05:43,750 --> 00:05:50,620
+as you will see in the upcoming videos. Ok to wind of this video let me list some of the operations
+正如你将在接下来的视频中看到的。好的，为了结束这个视频，让我列出一些可以独立执行的操作，
+
+60
+00:05:50,650 --> 00:05:57,100
+which can be performed independently hence which can be overlapped or can perform concurrently using
+这些操作可以重叠或可以使用不同的流并发执行，
+
+61
+00:05:57,220 --> 00:06:05,490
+different stream. Computations on the host, computations on the device, memory transfers from host to device,
+主机上的计算，设备上的计算，从主机到设备的内存传输，
+
+62
+00:06:05,490 --> 00:06:13,840
+memory transfers from the device to host, memory transfers within memory of a given device and
+从设备到主机的内存传输，给定设备内存内的内存传输
+
+63
+00:06:13,990 --> 00:06:16,200
+memory transfer among devices.
+设备之间的内存传输。
+
+64
+00:06:16,300 --> 00:06:22,800
+So in up coming videos you will see how to perform these operations concurrently using non-null streams.
+所以在接下来的视频中，你将看到如何使用非空流并发执行这些操作。

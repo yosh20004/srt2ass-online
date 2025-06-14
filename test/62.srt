@@ -1,0 +1,273 @@
+00:00:01,120 --> 00:00:09,280
+In this video I am going to show you how to create CUDA stream and how to perform asynchronous operations in a CUDA streams.
+在这段视频中，我将向您展示如何创建CUDA流以及如何在CUDA流中执行异步操作。
+
+2
+00:00:09,910 --> 00:00:13,540
+Let me first introduce you to a tool called nvvp or
+首先让我向您介绍一个名为nvvp的工具
+
+3
+00:00:13,550 --> 00:00:20,440
+NVIDIA Visual Profiler, which we are going to use to visualize our CUDA program execution.
+即NVIDIA视觉分析器，我们将用它来可视化我们的CUDA程序执行情况。
+
+4
+00:00:20,570 --> 00:00:28,080
+Here we have a program which performs simple calculations on input data and stores the results in the device.
+这里我们有一个程序，它对输入数据进行简单计算并将结果存储在设备中。
+
+5
+00:00:28,080 --> 00:00:29,320
+Here we have our kernel. It performs simple arithmetic operations on the input data.
+这里是我们的核函数。它对输入数据执行简单的算术操作。
+
+6
+00:00:29,430 --> 00:00:35,570
+Since we are going to visualize the execution of this program with NVIDIA Visual Profiler, to have a clear output
+因为我们将用NVIDIA视觉分析器来可视化这个程序的执行，为了得到清晰的输出
+
+7
+00:00:36,120 --> 00:00:42,640
+I have introduced a few iterations in the kernel as well.
+我在核函数中引入了一些迭代。
+
+8
+00:00:42,700 --> 00:00:45,320
+The sole purpose of this for loop is to increase the execution time so we can clearly observe
+这个for循环的唯一目的是增加执行时间，这样我们可以清楚地观察到
+
+9
+00:00:45,360 --> 00:00:52,680
+the execution in nvvp or NVIDIA Visual Profiler. That's all. And in the main file, I have performed the usual stuff.
+在nvvp或NVIDIA视觉分析器中的执行情况。就这样。在主文件中，我执行了常规操作。
+
+10
+00:01:00,690 --> 00:01:01,110
+you've seen so far. I have initialized the input host array and transferred that data to the device and then launched the kernel
+您到目前为止已经看到了。我已经初始化了输入主机数组，并将数据传输到设备上，然后启动了核函数
+
+11
+00:01:01,140 --> 00:01:09,100
+and wait for results to return and copy the results back to the host again. All these CUDA operations
+并等待结果返回并将结果再次复制回主机。所有这些CUDA操作
+
+12
+00:01:15,570 --> 00:01:20,780
+are happening via the default or null stream.
+都通过默认或空流进行。
+
+13
+00:01:20,820 --> 00:01:27,600
+Now let's look at how this program execution looks like in nvvp.
+现在让我们看看这个程序在nvvp中的执行情况。
+
+14
+00:01:27,620 --> 00:01:34,020
+We can use nvvp to profile our kernels and have a visual output on how our kernels are going to execute
+我们可以使用nvvp来分析我们的核函数，并对我们的核函数执行情况有一个视觉输出
+
+15
+00:01:34,140 --> 00:01:35,980
+in a particular device.
+在特定设备中。
+
+16
+00:01:36,090 --> 00:01:40,610
+We will learn more about the nvvp tool in the upcoming CUDA tool section,
+我们将在即将到来的CUDA工具部分中了解更多关于nvvp工具的信息，
+
+17
+00:01:40,740 --> 00:01:47,730
+but here, we are going to just use this tool to visualize CUDA program execution. So compile this program
+但在这里，我们将只使用这个工具来可视化CUDA程序执行。所以编译这个程序
+
+18
+00:01:48,180 --> 00:01:57,240
+and then type nvvp command and executable file name. Then our program will open up in nvvp.
+然后输入nvvp命令和可执行文件名。然后我们的程序将在nvvp中打开。
+
+19
+00:01:57,600 --> 00:02:01,110
+Initially you will be greeted with a window like this.
+最初你会看到一个像这样的窗口。
+
+20
+00:02:01,110 --> 00:02:03,190
+Just click next and finish.
+只需点击下一步并完成。
+
+21
+00:02:07,950 --> 00:02:12,070
+In this timeline, you can see when each CUDA operation happens.
+在这个时间轴上，你可以看到每个CUDA操作的发生时间。
+
+22
+00:02:12,300 --> 00:02:18,560
+Now, depending on the time consumed by your kernel and data transfers, you might not see the kernel
+现在，根据你的核函数和数据传输消耗的时间，你可能看不到核函数
+
+23
+00:02:18,570 --> 00:02:21,840
+execution properly. In such cases,
+执行情况。在这种情况下，
+
+24
+00:02:21,840 --> 00:02:28,290
+you can expand the timeline until you can see the results clearly by holding the control key and using the mouse scroll.
+你可以通过按住控制键并使用鼠标滚轮来扩展时间轴，直到你能清楚地看到结果。
+
+25
+00:02:30,310 --> 00:02:37,930
+Here you can see the order of your program. We perform host to device memory transfer first, then we have our kernel
+在这里你可以看到你的程序的顺序。我们首先进行主机到设备的内存传输，然后是我们的核函数
+
+26
+00:02:37,970 --> 00:02:38,990
+execution,
+执行，
+
+27
+00:02:39,010 --> 00:02:44,170
+and finally, we transfer the results of kernel execution back to the host.
+最后，我们将核函数执行的结果传回主机。
+
+28
+00:02:44,350 --> 00:02:52,270
+Notice in this window, to the left, you can see a tree hierarchy which specifies the memory copies, kernel executions
+注意在这个窗口的左侧，你可以看到一个树形层次结构，指定了内存复制、核函数执行
+
+29
+00:02:52,540 --> 00:02:59,140
+and which stream particular operations perform using these subtrees. Here all the operations we perform
+以及使用这些子树执行特定操作的流。在这里，我们执行的所有操作
+
+30
+00:02:59,140 --> 00:03:05,060
+here happen in the default stream or null stream and it can be noticed in this subtree as well.
+都发生在默认流或空流中，这也可以在这个子树中看到。
+
+31
+00:03:06,520 --> 00:03:07,290
+Ok,
+好的，
+
+32
+00:03:07,320 --> 00:03:12,380
+Now you know how our usual program looks like in an nvvp timeline.
+现在你知道我们的常规程序在nvvp时间轴中的样子了。
+
+33
+00:03:12,980 --> 00:03:15,470
+Here's what I'm going to do next.
+这是我接下来要做的。
+
+34
+00:03:15,620 --> 00:03:23,140
+Our ultimate goal is to overlap kernel execution with memory transferring to reduce overall kernel execution time.
+我们的最终目标是将核函数执行与内存传输重叠，以减少整体核函数执行时间。
+
+35
+00:03:23,140 --> 00:03:30,190
+For that we need two things. We should be able to launch multiple kernels and we should be able to transfer
+为此我们需要两件事。我们应该能够启动多个核函数，并且能够在主机和设备之间进行传输
+
+36
+00:03:30,200 --> 00:03:33,410
+memory between host and device asynchronously.
+异步传输内存。
+
+37
+00:03:33,440 --> 00:03:37,490
+So let's first look at how to perform multiple kernel launches.
+那么让我们首先看看如何执行多个核函数启动。
+
+38
+00:03:38,640 --> 00:03:44,960
+As you may already be aware, you can simply launch multiple kernels by having that statement in the
+正如你可能已经知道的那样，你可以简单地通过在主机代码中有该语句来启动多个核函数。
+
+39
+00:03:44,960 --> 00:03:45,880
+host code.
+主机代码中。
+
+40
+00:03:46,100 --> 00:03:52,380
+But, by default, all these operations happen sequentially via default stream.
+但是，默认情况下，所有这些操作通过默认流顺序发生。
+
+41
+00:03:52,510 --> 00:03:56,610
+We can overcome this limitation by creating CUDA streams.
+我们可以通过创建CUDA流来克服这一限制。
+
+42
+00:03:56,850 --> 00:04:00,810
+CUDA streams provide a mechanism for performing operations asynchronously.
+CUDA流提供了一种异步执行操作的机制。
+
+43
+00:04:00,920 --> 00:04:05,990
+This means that your host code does not have to wait for the CUDA kernel to finish execution before moving on to
+这意味着你的主机代码不必等待CUDA核函数完成执行才能继续执行
+
+44
+00:04:06,010 --> 00:04:10,360
+the next statement. This allows overlapping of data transfer and kernel execution.
+下一条语句。这允许数据传输和核函数执行的重叠。
+
+45
+00:04:11,480 --> 00:04:16,940
+So the first step in performing asynchronous operations in CUDA streams is to create the CUDA stream.
+因此，在CUDA流中执行异步操作的第一步是创建CUDA流。
+
+46
+00:04:16,980 --> 00:04:22,210
+This can be done by declaring a stream object and calling the cudaStreamCreate function.
+这可以通过声明一个流对象并调用cudaStreamCreate函数来完成。
+
+47
+00:04:22,730 --> 00:04:26,800
+Once the stream is created, we can pass it as an argument to our kernel launches.
+一旦流创建完成，我们可以将其作为参数传递给我们的核函数启动。
+
+48
+00:04:26,800 --> 00:04:32,810
+The kernel launches will then be assigned to this stream and can be executed asynchronously.
+核函数启动将分配到这个流中，并可以异步执行。
+
+49
+00:04:33,460 --> 00:04:38,960
+Additionally, we can use the cudaMemcpyAsync function to perform asynchronous memory transfers.
+此外，我们可以使用cudaMemcpyAsync函数来执行异步内存传输。
+
+50
+00:04:39,610 --> 00:04:45,270
+Here's a quick example to demonstrate how to create and use CUDA streams.
+这里有一个快速示例，展示如何创建和使用CUDA流。
+
+51
+00:04:46,150 --> 00:04:51,020
+First, we declare a cudaStream_t object. Then we create the stream using cudaStreamCreate.
+首先，我们声明一个cudaStream_t对象。然后我们使用cudaStreamCreate创建流。
+
+52
+00:04:51,540 --> 00:04:57,190
+Next, we modify our kernel launch to accept the stream as an argument and pass our stream object to it.
+接下来，我们修改我们的核函数启动以接受流作为参数，并将我们的流对象传递给它。
+
+53
+00:04:57,190 --> 00:05:03,290
+Finally, we use cudaMemcpyAsync instead of cudaMemcpy for asynchronous memory transfers.
+最后，我们使用cudaMemcpyAsync而不是cudaMemcpy进行异步内存传输。
+
+54
+00:05:03,980 --> 00:05:08,810
+This will allow our data transfers to overlap with kernel execution, reducing overall execution time.
+这将允许我们的数据传输与核函数执行重叠，从而减少整体执行时间。
+
+55
+00:05:10,020 --> 00:05:14,280
+That's it! You now know how to create CUDA streams and perform asynchronous operations.
+就是这样！你现在知道如何创建CUDA流并执行异步操作了。

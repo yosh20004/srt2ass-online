@@ -1,0 +1,299 @@
+1
+00:00:01,210 --> 00:00:08,090
+In this video we are going to discuss about second requirement of overlapping kernel execution with memory transferring
+
+2
+00:00:08,450 --> 00:00:12,470
+which is the asynchronous memory transferring. Here,
+
+3
+00:00:12,590 --> 00:00:18,280
+we have the program I showed you to visualize the common CUDA program execution steps in the previous video.
+
+4
+00:00:18,290 --> 00:00:20,870
+In this implementation,
+
+5
+00:00:20,900 --> 00:00:23,600
+memory copies are synchronize operations.
+
+6
+00:00:23,690 --> 00:00:29,740
+They block the host execution. To overlap memory transferring with kernel execution,
+
+7
+00:00:29,840 --> 00:00:34,290
+we need to perform this memory transferring asynchronously. For that
+
+8
+00:00:34,370 --> 00:00:44,030
+we are going to use cudaMemCpyAsync function. CudaMemCpyAsync function is almost similar to cudaMemCpy function.
+
+9
+00:00:44,080 --> 00:00:51,150
+But we can provide which stream this memory operation is going to execute as an argument to
+
+10
+00:00:51,150 --> 00:00:58,920
+this function as well. To perform a memory operation asynchronously CUDA runtime need the guarantee
+
+11
+00:00:58,920 --> 00:01:04,950
+that operating system will not move the virtual memory belongs to the memory being copied in the middle of the
+
+12
+00:01:04,950 --> 00:01:07,280
+memory transfer operation.
+
+13
+00:01:07,410 --> 00:01:10,970
+So we have to use pinned memory with this function call.
+
+14
+00:01:11,160 --> 00:01:18,360
+If we use unpinned memory, then this memory transfer will be a synchronous one which block the host execution.
+
+15
+00:01:18,750 --> 00:01:22,050
+Ok, let's use this function call to perform
+
+16
+00:01:22,080 --> 00:01:29,640
+asynchronous memory transferring operation now. In this example we are going to perform memory transferring
+
+17
+00:01:29,640 --> 00:01:32,670
+between host and device asynchronously.
+
+18
+00:01:32,950 --> 00:01:39,970
+Here, our kernel is similar to one we had in the previous common CUDA program step demonstration example,
+
+19
+00:01:39,990 --> 00:01:46,340
+and it just perform computations on the data transfer to the device.
+
+20
+00:01:46,980 --> 00:01:50,000
+So let's focus on the main function. Here,
+
+21
+00:01:50,010 --> 00:01:56,620
+We how to first add host pointers to hold memory for input and output of the GPU calculations.
+
+22
+00:01:56,700 --> 00:02:00,930
+Then we have to allocate pinned host memory for these pointers.
+
+23
+00:02:01,200 --> 00:02:05,550
+So to allocate pinned memory, we can use cudaMallocHost function
+
+24
+00:02:10,420 --> 00:02:13,240
+Now we need to create new CUDA stream.
+
+25
+00:02:13,580 --> 00:02:19,880
+So here, we have declared cuda stream type variable, and then we can use cudaStreamCreate function
+
+26
+00:02:20,060 --> 00:02:28,670
+to create a new stream. Then we can perform asynchronous memory transferring using cudaMemCpyAsync function
+
+27
+00:02:28,680 --> 00:02:30,520
+with this new stream.
+
+28
+00:02:31,010 --> 00:02:37,680
+Remember we have to provide our stream as the last argument for cudaMemCpyAsync function.
+
+29
+00:02:38,090 --> 00:02:40,070
+Now we can launch our kernel.
+
+30
+00:02:40,220 --> 00:02:44,990
+But remember here to provide news stream as the fourth kernel launch parameter as well.
+
+31
+00:02:45,100 --> 00:02:51,120
+But here, we are not going to use any shared memory so set the third kernel launch parameter to 0
+
+32
+00:02:51,170 --> 00:02:52,630
+and 4th one to new stream.
+
+33
+00:02:52,640 --> 00:02:54,730
+.
+
+34
+00:02:54,840 --> 00:02:58,940
+Ok, now we have to make our memory transferring device to host asynchronous as well.
+
+35
+00:02:58,940 --> 00:03:02,650
+So we can use cudaMemCpyAsync function
+
+36
+00:03:02,680 --> 00:03:05,860
+instead of cudaMemCpy function
+
+37
+00:03:05,920 --> 00:03:10,260
+here as well.
+
+38
+00:03:10,470 --> 00:03:17,310
+And finally we can call cudaStreamSynchronize on this stream to wait until all the functions in the
+
+39
+00:03:17,370 --> 00:03:19,210
+stream to execute.
+
+40
+00:03:19,230 --> 00:03:22,790
+Now let's look at what this program execution looked like.
+
+41
+00:03:22,830 --> 00:03:25,400
+In the nvvp.
+
+42
+00:03:25,860 --> 00:03:30,110
+So let me compile this program first and run it with nvvp command.
+
+43
+00:03:39,400 --> 00:03:40,760
+Ok, this is our output.
+
+44
+00:03:48,660 --> 00:03:56,240
+Now let me open up the output timeline for common cuda program execution steps program as well.
+
+45
+00:03:56,300 --> 00:04:01,810
+Now as you can see both of these outcomes are very similar. In new stream also
+
+46
+00:04:01,810 --> 00:04:08,000
+all the operations performed sequentially  as they should. Remember in this program,
+
+47
+00:04:08,150 --> 00:04:11,940
+all these cuda operations are asynchronous relative to the host.
+
+48
+00:04:12,290 --> 00:04:17,820
+But if we take one stream, operations put to that stream is going to execute in order.
+
+49
+00:04:18,050 --> 00:04:21,800
+So here even though all operations are asynchronous,
+
+50
+00:04:21,910 --> 00:04:28,000
+but in the device, all these cuda operations are going to execute in order.
+
+51
+00:04:28,320 --> 00:04:30,370
+Now here's what I'm going to do.
+
+52
+00:04:30,470 --> 00:04:36,240
+I'm going to perform same set of operations we perform using stream one in an other stream as well.
+
+53
+00:04:36,270 --> 00:04:43,760
+Usually when we are using multiple streams, we are partitioned same host memory and transfer blocks of memory
+
+54
+00:04:43,790 --> 00:04:46,400
+to device using different streams.
+
+55
+00:04:46,640 --> 00:04:54,290
+But here to keep this example simple, I'm going to have separate memory pointer for new kernel launch.
+
+56
+00:04:54,890 --> 00:05:15,110
+Then I have to allocate memory for that kernel launch using cudaMallochost function as well.
+
+57
+00:05:15,360 --> 00:05:17,860
+Now we need another stream here.
+
+58
+00:05:18,280 --> 00:05:24,730
+So let me add another stream variable, and create that stream using cudaStreamCreate function.
+
+59
+00:05:25,080 --> 00:05:29,790
+Then we can perform same set of operations using new stream as well.
+
+60
+00:05:29,800 --> 00:05:36,970
+So let me transfer memory from device to host asynchronously first, and then we can launch our kernel in
+
+61
+00:05:36,970 --> 00:05:37,970
+this new stream.
+
+62
+00:05:38,140 --> 00:05:55,960
+After that we can copy the results of that kernel launch back to host asynchronously as well.
+
+63
+00:05:55,970 --> 00:06:02,930
+Now let me run this program again with nvvp.
+
+64
+00:06:03,240 --> 00:06:03,760
+Ok,
+
+65
+00:06:03,920 --> 00:06:08,220
+As you can see from this output there are multiple overlaps happen in this program execution.
+
+66
+00:06:08,240 --> 00:06:17,720
+Here, two kernel executions are overlapped. Kernel execution and memory transfer from host to device
+
+67
+00:06:17,750 --> 00:06:24,530
+from two streams are overlapped as well. But none of the memory transfers in the same direction have overlapped.
+
+68
+00:06:24,530 --> 00:06:29,980
+This is due to having only one PCI-e bus.
+
+69
+00:06:30,290 --> 00:06:37,610
+So the connection allows only one memory transfers in one direction. Two memory transfers allowed if the
+
+70
+00:06:37,610 --> 00:06:41,270
+direction of those memory transfers are different.
+
+71
+00:06:41,290 --> 00:06:47,780
+Remember if we use synchronize memory copy here then all these operations will be execute one after another
+
+72
+00:06:47,840 --> 00:06:51,650
+which will resulted in extended execution time.
+
+73
+00:06:52,060 --> 00:06:58,160
+But here with asynchronous memory transferring, we can overlapped memory transferring with kernel executions
+
+74
+00:06:58,340 --> 00:07:05,390
+and memory transfer to different direction. So in this way by overlapping these operations we can reduce
+
+75
+00:07:05,390 --> 00:07:07,780
+the execution time of our cuda program.

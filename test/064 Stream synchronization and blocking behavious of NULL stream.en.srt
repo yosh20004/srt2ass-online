@@ -1,0 +1,311 @@
+1
+00:00:01,180 --> 00:00:05,490
+In this video, we are going to discuss about blocking and non blocking streams
+
+2
+00:00:05,490 --> 00:00:11,960
+relative to the null stream, and explicit and implicit synchronization of a CUDA program.
+
+3
+00:00:11,970 --> 00:00:20,630
+Even though operations of a non-null streams like asynchronous memory transfers and kernel launches are
+
+4
+00:00:20,780 --> 00:00:28,470
+non-blocking with respect to host, these operations can block operations in the null stream. Also operation in the
+
+5
+00:00:28,470 --> 00:00:32,170
+null-stream can block operations in non-null stream as well.
+
+6
+00:00:32,190 --> 00:00:39,850
+Based on the blocking nature relative to the null-stream, non null streams are categorized in to two types.
+
+7
+00:00:40,060 --> 00:00:44,150
+Blocking streams and non-blocking streams.
+
+8
+00:00:44,560 --> 00:00:52,030
+If a non-null stream is a blocking stream, then null stream can block operation in it. Meaning the execution
+
+9
+00:00:52,030 --> 00:00:58,500
+of operations in those streams can be block waiting for earlier operations in the null-stream to complete.
+
+10
+00:00:59,700 --> 00:01:02,580
+If a non-null stream is a non-blocking stream,
+
+11
+00:01:02,710 --> 00:01:06,190
+It will not block on operations in the null stream.
+
+12
+00:01:06,700 --> 00:01:12,850
+The null stream is an implicit stream, which synchronize with all other blocking stream in the same
+
+13
+00:01:13,180 --> 00:01:14,610
+CUDA context.
+
+14
+00:01:14,710 --> 00:01:21,880
+In general when an operation is issued to null stream, the CUDA context wait on all operations previously
+
+15
+00:01:21,880 --> 00:01:29,490
+issued but all blocking streams, before starting that operation. Also any operation issued to
+
+16
+00:01:29,500 --> 00:01:30,080
+blocking streams
+
+17
+00:01:30,110 --> 00:01:37,910
+will wait on proceeding operation in the null stream to complete before executing. Streams created
+
+18
+00:01:37,910 --> 00:01:45,660
+using cudaStreamCreate function are blocking streams. Let me quickly show you the blocking nature of
+
+19
+00:01:45,660 --> 00:01:51,950
+streams, relative to the null stream created using cudaStreamCreate function.
+
+20
+00:01:52,060 --> 00:01:57,690
+In this example I'm going to launch one kernel using three non-null streams.
+
+21
+00:01:57,880 --> 00:02:04,790
+So here I created three streams with cudaStreamCreate function and then launch our test kernels
+
+22
+00:02:04,870 --> 00:02:06,990
+the these three streams.
+
+23
+00:02:07,050 --> 00:02:12,130
+Let me compile this program and run it with nvvp. Ok,
+
+24
+00:02:12,420 --> 00:02:19,550
+here we have our nvvp time line, since we are executing same kernel in all three streams, all the bars have
+
+25
+00:02:19,550 --> 00:02:21,460
+same color here,
+
+26
+00:02:21,770 --> 00:02:25,980
+We can change the color for each stream using a S mark in the top panel.
+
+27
+00:02:26,420 --> 00:02:33,530
+Ok now you can see the each stream in different colors. As you can see all three kernels have executed
+
+28
+00:02:33,580 --> 00:02:34,220
+parallel in our device.
+
+29
+00:02:34,340 --> 00:02:40,270
+Now let me go back to our code. Notice here,
+
+30
+00:02:40,320 --> 00:02:43,900
+we are using cudaStreamCreate to create our streams.
+
+31
+00:02:44,220 --> 00:02:49,980
+And as I mentioned in the presentation cudaStreamCreate function create blocking streams
+
+32
+00:02:50,040 --> 00:02:51,930
+relative to the null stream.
+
+33
+00:02:52,020 --> 00:02:54,540
+So let me demonstrate that fact here.
+
+34
+00:02:54,690 --> 00:03:00,150
+Here I am going to make our second kernel launch to be launch to the null stream.
+
+35
+00:03:00,350 --> 00:03:05,520
+We can simply do that by removing stream in the kernel launch parameters.
+
+36
+00:03:06,100 --> 00:03:06,480
+Ok,
+
+37
+00:03:06,630 --> 00:03:14,970
+Let me compile this program again, and run it with nvvp. The output timeline is like this now. Notice here
+
+38
+00:03:15,080 --> 00:03:22,140
+even though we have two non-null streams with two kernel launches which are asynchronous in the host perspective
+
+39
+00:03:22,140 --> 00:03:27,550
+still in the device, all these kernels execute one after another.
+
+40
+00:03:28,110 --> 00:03:35,100
+This is due to the blocking relationship null stream have with non-null streams. Stream one and stream three
+
+41
+00:03:35,100 --> 00:03:38,770
+created using cudaStreamCreate function,
+
+42
+00:03:38,850 --> 00:03:41,440
+So those streams are blocking streams
+
+43
+00:03:41,820 --> 00:03:48,090
+So the second kernel launch to the null stream has to wait until first kernel launch finished its execution in the
+
+44
+00:03:48,120 --> 00:03:55,550
+stream one. And in the third kernel launch to the stream three has to wait until kernel launch to null stream
+
+45
+00:03:55,600 --> 00:03:58,080
+to finish. Ok,
+
+46
+00:03:58,200 --> 00:04:01,420
+now we realize the blocking nature of null stream.
+
+47
+00:04:01,560 --> 00:04:05,480
+Now let me show you a way to get rid of this blocking nature.
+
+48
+00:04:07,190 --> 00:04:15,230
+The cuda runtime provides function call cudaStreamCreateWithFlags which allows customization of non null stream's
+
+49
+00:04:15,280 --> 00:04:18,810
+behaviors relative to the null stream.
+
+50
+00:04:18,950 --> 00:04:26,210
+Here, the flag argument determine the behavior of the created stream. Valid values for flag are
+
+51
+00:04:26,210 --> 00:04:32,780
+cudaSteramDefault, which is the default or blocking stream creation flag, cudaStreamNonBlocking, which is the
+
+52
+00:04:32,890 --> 00:04:40,990
+asynchronous or non-blocking stream creation flag. Specifying cudaSteamNonBlocking disable the blocking
+
+53
+00:04:40,990 --> 00:04:44,740
+behaviors of non-null stream, relative to the null steam.
+
+54
+00:04:45,100 --> 00:04:50,170
+Ok, let me modify our previous example to demonstrate the usage if this function.
+
+55
+00:04:51,360 --> 00:04:51,920
+Ok here,
+
+56
+00:04:52,080 --> 00:04:59,630
+I am going to make stream 3 as a non-blocking stream first. So here, instead of creating stream 3 with
+
+57
+00:04:59,960 --> 00:05:05,630
+cudaStreamCreate function, let's create it with using cudaStreamCreateWithFlag function,
+
+58
+00:05:05,810 --> 00:05:10,610
+and we are going to set flag to cudaStreamNonBlocking.
+
+59
+00:05:10,670 --> 00:05:12,970
+Now lets run this example again with nvvp.
+
+60
+00:05:13,040 --> 00:05:16,090
+In the output,
+
+61
+00:05:16,220 --> 00:05:23,780
+you can see that, two non null streams are execute parallel. This is because stream 3 is a non-blocking  steam,
+
+62
+00:05:23,790 --> 00:05:24,530
+,
+
+63
+00:05:24,540 --> 00:05:29,360
+so it does not have to wait until, kernel execution in null stream to finish.
+
+64
+00:05:29,610 --> 00:05:38,200
+Also null stream has to execute, its kernel only after stream 1 have finished the kernel execution in that stream
+
+65
+00:05:38,310 --> 00:05:44,990
+and this is because stream 1 is blocking stream, so null stream  has to wait until stream 1 finish
+
+66
+00:05:45,030 --> 00:05:46,090
+its execution.
+
+67
+00:05:46,920 --> 00:05:52,120
+Now let's make, both stream 1 and stream 3 to be non null streams.
+
+68
+00:05:52,130 --> 00:05:58,400
+So here, I have to create stream 1 using cudaStreamCreate with flag function as well.
+
+69
+00:06:06,170 --> 00:06:10,660
+Now let's see the nvvp timeline for this program execution.
+
+70
+00:06:10,660 --> 00:06:16,810
+So let me compile the program and run it with nvvp tool. Ok here,
+
+71
+00:06:16,870 --> 00:06:18,390
+we have the output,
+
+72
+00:06:18,530 --> 00:06:25,950
+you can see that all three streams have executed parallel. Notice here one stream is the null stream.
+
+73
+00:06:26,270 --> 00:06:33,740
+But since we make our non-null streams to non-blocking streams, non of the streams have to wait until kernel execution
+
+74
+00:06:33,770 --> 00:06:34,640
+is finished in other streams.
+
+75
+00:06:34,640 --> 00:06:40,470
+Even though we tend to have non blocking non null streams,
+
+76
+00:06:40,510 --> 00:06:46,590
+sometimes we have to make, non null streams blocking for synchronization purpose.
+
+77
+00:06:46,630 --> 00:06:53,770
+So, one advantage of blocking nature of null stream is that, null stream can be use as synchronization
+
+78
+00:06:53,770 --> 00:06:55,960
+mechanism between different streams.

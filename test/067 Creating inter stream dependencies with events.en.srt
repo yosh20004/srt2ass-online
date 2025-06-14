@@ -1,0 +1,203 @@
+1
+00:00:00,770 --> 00:00:07,430
+In this video we are going to look at configurable events in cuda and how to use those events to create
+
+2
+00:00:07,630 --> 00:00:11,920
+inter stream dependencies. In complex applications
+
+3
+00:00:11,960 --> 00:00:18,650
+It can be useful to introduce inter stream dependencies that block operations in one stream until the
+
+4
+00:00:18,710 --> 00:00:25,460
+operation in another streams have completed. Events can be used to add inter stream dependencies like that.
+
+5
+00:00:25,460 --> 00:00:33,420
+Before move on to inter stream dependencies, let me show you how to crate configurable event
+
+6
+00:00:33,480 --> 00:00:35,140
+in cuda.
+
+7
+00:00:35,250 --> 00:00:41,550
+You can use cudaEventCreateWithFlags function to create events with different set of properties and behaviours.
+
+8
+00:00:41,790 --> 00:00:44,110
+For this function,
+
+9
+00:00:44,130 --> 00:00:50,360
+We have to specify particular cuda event and specific flag related to the behavior we need.
+
+10
+00:00:50,640 --> 00:00:52,140
+So let's look at flags
+
+11
+00:00:52,170 --> 00:00:58,570
+We can use in this function. If the flag  is cudaEventDefault then the event will have default behavour.
+
+12
+00:00:58,580 --> 00:01:05,840
+The flag cudaEventBlockingSync specifies that synchronizing on this event with cudaEventSynchronize
+
+13
+00:01:05,940 --> 00:01:12,180
+funciton will block the calling thread. The default behaviour of cudaEventSynchronize is to spin
+
+14
+00:01:12,480 --> 00:01:20,600
+on the evnt using cpu cycles to constantly check the events status. With cudaEventBlockingSync flag set
+
+15
+00:01:20,610 --> 00:01:28,500
+the calling thread instead gives up the core it is running on to another thread or processed by
+
+16
+00:01:28,500 --> 00:01:31,260
+going to sleep untill the event is satisfied.
+
+17
+00:01:31,510 --> 00:01:32,040
+.
+
+18
+00:01:32,100 --> 00:01:40,960
+While this can leads to fewer wasted CPU cycles, if other useful work can be done, it can also lead to longer latencies
+
+19
+00:01:40,980 --> 00:01:49,610
+between events being satisfied and calling thread being activated. Passing event disable timing indicates
+
+20
+00:01:49,610 --> 00:01:55,350
+that the created event is only use for synchronization and does not need to record timing data.
+
+21
+00:01:55,350 --> 00:02:01,380
+Removing the overhead of taking time stamps will improve the performance of calls to
+
+22
+00:02:01,420 --> 00:02:07,180
+cudaStreamWaitEvent and cudaEventQuery functions.
+
+23
+00:02:07,410 --> 00:02:14,520
+The flag cudaEventInterprocess indicate that the created event may be used as a interprocess event.
+
+24
+00:02:15,310 --> 00:02:17,630
+Ok now let's move on to the
+
+25
+00:02:17,710 --> 00:02:20,260
+inter stream dependencies.
+
+26
+00:02:20,440 --> 00:02:26,300
+We can use cudaStreamWaitEvent function to create inter stream dependencies.
+
+27
+00:02:26,300 --> 00:02:31,310
+Ok, let me show you how to create a stream dependency with this function now.
+
+28
+00:02:31,310 --> 00:02:39,510
+Here we have a code similar to one we had in the demonstrate the blocking nature of the null stream.
+
+29
+00:02:39,520 --> 00:02:43,630
+Here we are launching same kernel in three non-null streams,
+
+30
+00:02:43,750 --> 00:02:47,900
+so if we compile this program and run the program with nvvp,
+
+31
+00:02:47,950 --> 00:02:50,200
+the outcome would look like this.
+
+32
+00:02:50,290 --> 00:02:55,110
+All the kernels in all streams executes paralelly.
+
+33
+00:02:55,110 --> 00:03:02,690
+Now let's introduce interstream dependency between stream one and three and see how the outcome would look like.
+
+34
+00:03:04,320 --> 00:03:06,170
+So here, i need a cuda event,
+
+35
+00:03:06,780 --> 00:03:15,960
+so let me declare that here, and then we can create the event with cudaCreateEventWithFlag function.
+
+36
+00:03:16,000 --> 00:03:16,780
+You can use
+
+37
+00:03:16,870 --> 00:03:18,550
+cudaEventCreate function as well.
+
+38
+00:03:18,820 --> 00:03:27,360
+But here, we do not wish to record timing for this event, therefore we can specify this option to cudaCreateEventWithFlag
+
+39
+00:03:27,520 --> 00:03:28,930
+function.
+
+40
+00:03:29,250 --> 00:03:36,710
+Then after launching K1 kernel, we can record this event and then we can use cudaStreamWaitEvent function
+
+41
+00:03:37,010 --> 00:03:39,410
+to make stream 3 to wait on this event.
+
+42
+00:03:39,410 --> 00:03:46,610
+This code line will guranteed that steam 3 operations which come after these statements
+
+43
+00:03:47,390 --> 00:03:52,150
+have to wait on this event to complete. After all these
+
+44
+00:03:52,230 --> 00:03:56,910
+we have to released the resources for our event with cudaEventDestroy function.
+
+45
+00:03:57,280 --> 00:04:00,950
+Ok, let's now run the program with nvvp.
+
+46
+00:04:01,300 --> 00:04:09,770
+So let me compile our program quickly, and then run the executable with nvvp. The outcome of nvvp
+
+47
+00:04:09,770 --> 00:04:11,450
+would look like this.
+
+48
+00:04:11,450 --> 00:04:19,430
+Here you can clearly see that kernels in stream 1 and stream 2 runs parallel, but stream 3 has to wait
+
+49
+00:04:19,790 --> 00:04:24,500
+to execute its kernel until the stream 1's event is triggered.
+
+50
+00:04:24,500 --> 00:04:27,410
+This is due to the inter stream dependency.
+
+51
+00:04:27,530 --> 00:04:29,720
+we introduce using cude event.

@@ -1,0 +1,467 @@
+1
+00:00:01,120 --> 00:00:09,280
+In this video i am going to show you how to create CUDA stream and how to perform asynchronous operations in a CUDA streams.
+
+2
+00:00:09,910 --> 00:00:13,540
+Let me first introduce you to tool called nvvp or
+
+3
+00:00:13,550 --> 00:00:20,440
+nvidia visual profiler which we are going to used to visualize our CUDA program execution.
+
+4
+00:00:20,570 --> 00:00:28,080
+Here we have a program which performs simple calculation on input data and store the results in output in
+
+5
+00:00:28,080 --> 00:00:29,320
+the device.
+
+6
+00:00:29,430 --> 00:00:35,570
+Here we have our kernel. It perform simple arithmatic operation on the input data.
+
+7
+00:00:36,120 --> 00:00:42,640
+Since we are going to visualize the execution of this progam with nvidia visual profiler, to have a clear output
+
+8
+00:00:42,700 --> 00:00:45,320
+i have introduce few iterations in the kernel as well.
+
+9
+00:00:45,360 --> 00:00:52,680
+Sole purpose of this for loop is to increase the execution time so we can clearly observe
+
+10
+00:00:52,680 --> 00:01:00,690
+the execution in nvvp or nvidia visual profiler. That's all. And in the main file i have perform usual stuff
+
+11
+00:01:00,690 --> 00:01:01,110
+.
+
+12
+00:01:01,140 --> 00:01:09,100
+you seen so far. I have initialzied input host array and transfer that data to the device and then launch the kernel
+
+13
+00:01:09,100 --> 00:01:15,540
+and wait for results to return and copy the results back to the host again. All these CUDA operations
+
+14
+00:01:15,570 --> 00:01:20,780
+are happening via default or null stream.
+
+15
+00:01:20,820 --> 00:01:27,600
+Now let's look at how this program execution is look like in the nvvp.
+
+16
+00:01:27,620 --> 00:01:34,020
+We can use nvvp to profile our kernels and have a visual output on how our kernels are going to execute
+
+17
+00:01:34,140 --> 00:01:35,980
+in a particular device.
+
+18
+00:01:36,090 --> 00:01:40,610
+We will learn more on nvvp tool in upcomming CUDA tool section
+
+19
+00:01:40,740 --> 00:01:47,730
+But here, we are going to just use this tool to visualize cuda program execution. So compile this program
+
+20
+00:01:48,180 --> 00:01:57,240
+and then type nvvp command and executable file name. Then our program will be open up in nvvp.
+
+21
+00:01:57,600 --> 00:02:01,110
+Initially you will be greeted with window like this.
+
+22
+00:02:01,110 --> 00:02:03,190
+Just click next and finish.
+
+23
+00:02:07,950 --> 00:02:12,070
+In this time line you can see when each CUDA operation is happen.
+
+24
+00:02:12,300 --> 00:02:18,560
+Now depending on the time consumed by your kernel and data transfers you might not see the kernel
+
+25
+00:02:18,570 --> 00:02:21,840
+execution properly. In such cases
+
+26
+00:02:21,840 --> 00:02:28,290
+you can expand time line until you can see the results clearly by holding control key and using mouse scroll.
+
+27
+00:02:28,360 --> 00:02:30,220
+.
+
+28
+00:02:30,310 --> 00:02:37,930
+Here you can see the order of your program. We perform host to device memory transfer first, then we have our kernel
+
+29
+00:02:37,970 --> 00:02:38,990
+execution,
+
+30
+00:02:39,010 --> 00:02:44,170
+and finally we transfered the results of kernel execution back to the host.
+
+31
+00:02:44,350 --> 00:02:52,270
+Notice in this window ,to the left, you can see a tree hierarchy which specify the memory copies, kernel executions
+
+32
+00:02:52,540 --> 00:02:59,140
+and which stream particular operation perform using these subtrees. Here all the operations we perform
+
+33
+00:02:59,140 --> 00:03:05,060
+here happen in the default stream or null stream and it had been notice in this subtree as well.
+
+34
+00:03:06,520 --> 00:03:07,290
+Ok,
+
+35
+00:03:07,320 --> 00:03:12,380
+Now you know how our usual progam look like in a nvvp time line.
+
+36
+00:03:12,980 --> 00:03:15,470
+Here's what I'm going to do next.
+
+37
+00:03:15,620 --> 00:03:23,140
+Our ultimate goal is to overlap kernel execution with memory transferring to reduce overall kernel execution time.
+
+38
+00:03:23,140 --> 00:03:30,190
+For that we need two things. We should be able to launch multiple kernels and we should be able to transfer
+
+39
+00:03:30,200 --> 00:03:33,410
+memory between host and device asynchronously.
+
+40
+00:03:33,440 --> 00:03:37,490
+So let's first look at how to perform multiple kernel launches.
+
+41
+00:03:38,640 --> 00:03:44,960
+As you may already aware, you can simply lauch multiple kernels by simply having that statement in the
+
+42
+00:03:44,960 --> 00:03:45,880
+host code.
+
+43
+00:03:46,100 --> 00:03:53,030
+But this is not what we are after. Launching multiple kernels in to the same stream does not help us  to make
+
+44
+00:03:53,030 --> 00:03:56,940
+kernel execution parallel since with in a single stream
+
+45
+00:03:56,960 --> 00:03:59,490
+CUDA operations follows strick ordering.
+
+46
+00:03:59,960 --> 00:04:04,490
+So if you launch same kernel multiple times using default stream
+
+47
+00:04:04,490 --> 00:04:11,420
+which means if you launch multiple kernels without specifying which steam to use explicitly, then those kernel launches
+
+48
+00:04:11,430 --> 00:04:16,160
+are going to excute one after another in the device.
+
+49
+00:04:16,160 --> 00:04:18,460
+So let's verify this fact first.
+
+50
+00:04:18,760 --> 00:04:27,200
+Ok, in this example I have kernel called simple kernel which prints hello from kernel to the console. In the main function
+
+51
+00:04:27,200 --> 00:04:34,660
+I am going to launch this kernel multiple times with one thread executing each. Now from the host perspective,
+
+52
+00:04:35,090 --> 00:04:41,420
+all three kernels launches we have here are asynchronous calls, so that hosts execution does not block
+
+53
+00:04:41,420 --> 00:04:43,820
+by these kernel launch statements.
+
+54
+00:04:43,880 --> 00:04:48,820
+So by looking at host perspective, someone may see all three kernels
+
+55
+00:04:48,830 --> 00:04:56,990
+runs parallel in the device. But since we use default stream for each of these kernel launches, these kernel launches
+
+56
+00:04:57,020 --> 00:04:59,740
+will be executed one after another.
+
+57
+00:05:00,230 --> 00:05:03,190
+Let's verify this fact with nvvp now.
+
+58
+00:05:03,860 --> 00:05:06,390
+So let me compile this program first.
+
+59
+00:05:08,710 --> 00:05:10,930
+And then run it with nvvp tool.
+
+60
+00:05:17,930 --> 00:05:26,300
+Ok, as you can see from the output all three kernels executes one after another in the default stream.
+
+61
+00:05:26,300 --> 00:05:31,070
+Which stream perticular kernel executes can be viewed by sub tree in the left side.
+
+62
+00:05:31,200 --> 00:05:36,480
+Here it says default, since all three kernels execute in the default stream.
+
+63
+00:05:36,680 --> 00:05:41,180
+If we have multiple streams, there will be multiple streams shown in this subtree.
+
+64
+00:05:41,750 --> 00:05:49,060
+So here we verify that multiple kernel launches to the same stream does not execute parallel in the device.
+
+65
+00:05:49,310 --> 00:05:55,290
+So how to perform multiple kernel launches with different stream then.
+
+66
+00:05:55,430 --> 00:05:59,470
+For that we have to first create necessary amount of streams first.
+
+67
+00:05:59,600 --> 00:06:08,520
+So let's see how to create new CUDA streams now. We can create new stream using cudaStreamCreate() function.
+
+68
+00:06:08,520 --> 00:06:14,960
+You have to provide pointer to a stream variable as the argument to this function. After creating
+
+69
+00:06:14,960 --> 00:06:22,670
+you can perform operations on this stream. You can delete stream by using cudaStreamDestroy function.
+
+70
+00:06:22,670 --> 00:06:29,220
+You have to provide the pointer to the stream you want to delete as the argument for this function.
+
+71
+00:06:29,320 --> 00:06:36,170
+If is still pending work in the stream when cudaStreamDestroy is called on that stream,  cudaStreamDestroy
+
+72
+00:06:36,170 --> 00:06:42,980
+returns immediately and resource associated with those streams are released automatically when
+
+73
+00:06:43,070 --> 00:06:45,740
+all the work is the stream has completed.
+
+74
+00:06:45,830 --> 00:06:50,880
+No we are going to perform asynchronous operations using these new streams.
+
+75
+00:06:51,020 --> 00:06:55,970
+So you need a way to check whether the operation in the stream finished or not.
+
+76
+00:06:56,480 --> 00:07:03,260
+You can use cudaStreamSynchronize function for that. cudaStreamSynchronize function call is a blocking
+
+77
+00:07:03,260 --> 00:07:04,380
+function call.
+
+78
+00:07:04,520 --> 00:07:11,600
+So this will hold host code execution until all the operations in the called stream are finished.
+
+79
+00:07:11,680 --> 00:07:19,820
+Also you can use cudaStreamQuery function as well. This function call check whether all the operations in the stream
+
+80
+00:07:19,850 --> 00:07:27,380
+completed, but does not block the host if they have not completed. CUDA stream query returns cudaSucess
+
+81
+00:07:27,650 --> 00:07:35,120
+if all the operations are complete or flag called cudaErrorNotReady if one or more operation is is still
+
+82
+00:07:35,120 --> 00:07:37,520
+executing or pending execution.
+
+83
+00:07:37,900 --> 00:07:42,050
+Ok, now let me launch kernel's in our previous example to
+
+84
+00:07:42,230 --> 00:07:44,270
+different streams. Here,
+
+85
+00:07:44,270 --> 00:07:50,430
+First we have to check whether our device have the parallel kernel execution capability or not.
+
+86
+00:07:50,680 --> 00:07:54,120
+Only the device with compute capability 2.0 or later
+
+87
+00:07:54,320 --> 00:07:57,480
+have this concurrent kernel execution capability.
+
+88
+00:07:57,680 --> 00:08:01,170
+You can check that with concurrent_kernels device property.
+
+89
+00:08:01,430 --> 00:08:03,510
+So let me query the device properties with
+
+90
+00:08:03,530 --> 00:08:06,730
+cudaGetDeviceProperties function call here.
+
+91
+00:08:07,100 --> 00:08:13,750
+Then we can use concurrent_kernel property to check whether our device allows concurrent kernel execution.
+
+92
+00:08:14,090 --> 00:08:19,970
+And if our device does not support concurrent kernel execution, then kernel launches we are going to
+
+93
+00:08:19,970 --> 00:08:22,620
+make here will be serialized.
+
+94
+00:08:22,680 --> 00:08:28,080
+We have three kernels here and we are going to launch those kernels to different streams.
+
+95
+00:08:28,100 --> 00:08:30,000
+So we need three streams.
+
+96
+00:08:30,250 --> 00:08:33,670
+Okay let me declare those streams first.
+
+97
+00:08:33,910 --> 00:08:41,380
+No we need to create those streams with cudaStreamCreate function.
+
+98
+00:08:41,450 --> 00:08:46,730
+We can specify which stream where particular kernel is going to execute by setting 4th kernel
+
+99
+00:08:46,760 --> 00:08:48,180
+launch parameter.
+
+100
+00:08:48,450 --> 00:08:53,870
+Since we are not considering about shared memory here, we can set 3rd kernel launch parameter to zero
+
+101
+00:08:53,870 --> 00:09:01,480
+and set 4th parameter to stream we want. Then we have to reclaim the resources associated with
+
+102
+00:09:01,490 --> 00:09:04,560
+this streams after our kernel execution finish.
+
+103
+00:09:04,550 --> 00:09:10,760
+So here we have to call cudaStreamDestroy function for each of our declared stream now.
+
+104
+00:09:11,400 --> 00:09:18,200
+Then here, we have cudaDeviceSynchronize function which will block the host thread until all the operations in
+
+105
+00:09:18,290 --> 00:09:20,480
+all the streams are finished.
+
+106
+00:09:20,960 --> 00:09:24,410
+Or we could cudaStreanSynchronize function here as well.
+
+107
+00:09:24,590 --> 00:09:28,080
+But since we have to wait until all the streams are finished,
+
+108
+00:09:28,160 --> 00:09:30,830
+let's not change this function call.
+
+109
+00:09:31,490 --> 00:09:35,340
+Now let me compiler this program and run it with nvvp.
+
+110
+00:09:45,990 --> 00:09:50,290
+The nvvp time line for this execution is looking like this.
+
+111
+00:09:50,360 --> 00:09:57,520
+Here you can see all three kernels have executed parallel. To highlight multiple kernel execution
+
+112
+00:09:57,520 --> 00:10:01,390
+Click the button with S letter at the top of the window.
+
+113
+00:10:01,390 --> 00:10:07,400
+This will make the execution happen in different streams to have different colors in the timeline.
+
+114
+00:10:07,780 --> 00:10:11,990
+So now you can identify the parallel execution of each kernel clearly.
+
+115
+00:10:12,260 --> 00:10:18,740
+Ok, now we know how to execute concurrent kernels in our device using multiple streams.
+
+116
+00:10:18,750 --> 00:10:24,880
+Now we have to find a way to transfer memory between host and device  asynchronously. In the next vedio
+
+117
+00:10:24,940 --> 00:10:26,440
+We are going to learn that as well.

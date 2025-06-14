@@ -1,0 +1,95 @@
+1
+00:00:01,480 --> 00:00:07,730
+In this video, we are going to quickly look at explicit and implicit synchronization in a cuda program.
+
+2
+00:00:08,560 --> 00:00:11,820
+Explicit synchronizations are pretty obvious.
+
+3
+00:00:12,220 --> 00:00:20,080
+The cuda runtime support several ways of explicitly synchronizing a cuda program at the grid level.
+
+4
+00:00:20,080 --> 00:00:26,650
+Synchronizing the device usign cudaDeviceSynchronize function, synchronizing a stream with cudaStreamSynchronize function,
+
+5
+00:00:27,060 --> 00:00:33,820
+synchronizing an event in a stream with cudaEventSynchronize function and synchronizing across streams
+
+6
+00:00:33,820 --> 00:00:38,540
+using an events. In case of cudaDeviceSynchronize function
+
+7
+00:00:38,680 --> 00:00:44,530
+all the operations in the device after this function call has to wait until all the operations in the device
+
+8
+00:00:44,530 --> 00:00:51,880
+which perform before function call to finish. In case of cudaStreamSynchronize funciton, operations
+
+9
+00:00:51,940 --> 00:00:59,470
+in the device, which comes after certain stream will be blocked. On the other hand implicit synchronization
+
+10
+00:00:59,470 --> 00:01:07,150
+happen as side effect of a blocking function calls. How ever the main purpose of those function calls are
+
+11
+00:01:07,150 --> 00:01:12,700
+not to introduce synchronize point in the device, but to perform some operations on the device like
+
+12
+00:01:12,850 --> 00:01:14,050
+memory transferring.
+
+13
+00:01:15,270 --> 00:01:22,950
+Implicit synchronization is a special interest in CUDA programming because runtime functions with implicit
+
+14
+00:01:22,950 --> 00:01:31,350
+synchronization behavior may cause un wanted blocking usually at the device level. Many memory related operations
+
+15
+00:01:31,480 --> 00:01:36,150
+imply blocking on all previous operations on the current device.
+
+16
+00:01:36,270 --> 00:01:43,410
+Remember here we are talking about device implicit synchronization not the host. But usually functions
+
+17
+00:01:43,450 --> 00:01:47,700
+we discuss here are also block the host execution as well.
+
+18
+00:01:48,510 --> 00:01:55,380
+Page lock memory allocation is one such operation. So pinned memory allocations using cudaMallocHost
+
+19
+00:01:55,380 --> 00:01:59,340
+function or zero copy memory allocation using cudaHostAlloc function
+
+20
+00:01:59,390 --> 00:02:03,530
+will block all the operations execution in the device until
+
+21
+00:02:03,570 --> 00:02:11,890
+memory allocation in the host to finish. Other operations like device memory allocation with cudaMalloc,
+
+22
+00:02:11,890 --> 00:02:18,880
+device memory set with cudaMemset, memory copies between two address on the same devices and modification to
+
+23
+00:02:18,880 --> 00:02:26,010
+L2 or shared memory configuration operations imply blockign of all previous operations on the curreant
+
+24
+00:02:26,010 --> 00:02:26,950
+device as well.

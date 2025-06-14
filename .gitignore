@@ -1,0 +1,33 @@
+# 构建目录
+build/
+cmake-build-*/
+
+# 日志文件
+logs/
+*.log
+
+# IDE相关
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 编译产物
+*.o
+*.so
+*.a
+*.out
+server
+
+# Python虚拟环境
+venv/
+__pycache__/
+*.pyc
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 子模块目录
+srt2ass/
+third_party/spdlog/ 
