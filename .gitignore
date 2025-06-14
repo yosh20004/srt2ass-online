@@ -28,5 +28,4 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# 子模块目录
-srt2ass/ 
+# 子模块目录 
