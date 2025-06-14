@@ -25,7 +25,22 @@
 // ================= 全局配置和变量 =================
 std::atomic<int> active_clients_count(0); // 活跃客户端数量
 
-constexpr int PORT = 8080;
+// 从环境变量读取端口号，如果没有设置则使用默认值8080
+int get_port_from_env() {
+    const char* port_str = std::getenv("SERVER_PORT");
+    if (port_str) {
+        try {
+            int port = std::stoi(port_str);
+            if (port > 0 && port < 65536) {
+                return port;
+            }
+        } catch (const std::exception& e) {
+            spdlog::warn("Invalid port number in SERVER_PORT environment variable: {}. Using default port 8080.", port_str);
+        }
+    }
+    return 8080;
+}
+
 constexpr int BACKLOG = 1024; // 增加了backlog的大小
 constexpr int MAX_CLIENTS = 1024;
 constexpr int MAX_EVENTS = MAX_CLIENTS + 1;
@@ -254,11 +269,11 @@ void cleanup_client(std::shared_ptr<ClientState> state) {
 void init(); // 假设这个函数在别处定义
 
 int main() {
-
     init(); // 调用您自己的初始化函数
 
     int server_fd;
     struct sockaddr_in server_addr;
+    int port = get_port_from_env();
 
     // 创建服务器套接字 (非阻塞)
     server_fd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
@@ -279,7 +294,7 @@ int main() {
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PORT);
+    server_addr.sin_port = htons(port);
     
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         spdlog::critical("Bind failed: {}", strerror(errno));
@@ -314,7 +329,7 @@ int main() {
     }
 
     struct epoll_event events[MAX_EVENTS];
-    spdlog::info("Server listening on port {}...", PORT);
+    spdlog::info("Server listening on port {}...", port);
 
     // ================= 主事件循环 =================
     while (true) {
