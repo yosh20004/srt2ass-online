@@ -18,13 +18,20 @@ FetchContent_Declare(
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog
 )
 
+# 配置 srt2ass
+FetchContent_Declare(
+    srt2ass
+    GIT_REPOSITORY https://github.com/yosh20004/srt2ass.git
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/srt2ass
+)
+
 # 配置 spdlog 选项
 set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 
-# 下载并配置 spdlog
-FetchContent_MakeAvailable(spdlog)
+# 下载并配置依赖
+FetchContent_MakeAvailable(spdlog srt2ass)
 
 # 添加源文件
 set(SOURCES
@@ -51,12 +58,12 @@ target_include_directories(server PRIVATE
 
 # 添加 srt2ass 可执行文件
 add_executable(srt2ass_executable
-    srt2ass/main.cpp
-    srt2ass/srt2ass_api.cpp
-    srt2ass/SRTReader.cpp
-    srt2ass/srtTransfer.cpp
-    srt2ass/ASSWriter.cpp
-    srt2ass/SRTChecker.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/srt2ass/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/srt2ass/srt2ass_api.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/srt2ass/SRTReader.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/srt2ass/srtTransfer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/srt2ass/ASSWriter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/srt2ass/SRTChecker.cpp
 )
 
 # 设置 srt2ass 的包含目录和链接库
