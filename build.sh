@@ -34,6 +34,16 @@ check_dependencies() {
     fi
 }
 
+# 初始化子模块
+init_submodules() {
+    print_info "初始化子模块..."
+    
+    git submodule update --init --recursive || {
+        print_error "子模块初始化失败"
+        exit 1
+    }
+}
+
 # 创建并进入构建目录
 setup_build_dir() {
     print_info "设置构建目录..."
@@ -93,6 +103,7 @@ main() {
     print_info "开始构建项目..."
     
     check_dependencies
+    init_submodules
     setup_build_dir
     run_cmake
     build_project
