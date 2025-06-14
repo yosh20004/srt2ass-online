@@ -29,5 +29,4 @@ __pycache__/
 Thumbs.db
 
 # 子模块目录
-srt2ass/
-third_party/spdlog/ 
+srt2ass/ 

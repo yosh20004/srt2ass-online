@@ -4,8 +4,27 @@ project(http_server)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 添加第三方依赖
-add_subdirectory(third_party/spdlog)
+# 包含 FetchContent 模块
+include(FetchContent)
+
+# 确保 third_party 目录存在
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
+
+# 配置 spdlog
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.12.0  # 使用稳定版本
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog
+)
+
+# 配置 spdlog 选项
+set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(SPDLOG_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+
+# 下载并配置 spdlog
+FetchContent_MakeAvailable(spdlog)
 
 # 添加源文件
 set(SOURCES
