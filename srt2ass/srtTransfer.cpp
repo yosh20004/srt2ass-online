@@ -48,10 +48,13 @@ std::string srtTransfer::time_transfer(std::string_view data) {
     }
 
     auto DealWithMilliseconds = [](std::string& Time) -> void {
-        for (int i = 0; i <= Time.length(); ++i) {
+        for (size_t i = 0; i < Time.size(); ++i) {
             if (Time[i] == '.') {
-                Time.erase(i + 3);  // i+1是点号的位置，再加上2是删除后面的两位数字
-                break;  // 只处理第一个点号后面的两位数字
+                // 小数点后仅保留两位（总长度到点后2位）
+                if (i + 3 < Time.size()) {
+                    Time.erase(i + 3);
+                }
+                break;
             }
         }
     };

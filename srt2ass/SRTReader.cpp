@@ -52,8 +52,9 @@ const bool SRTReader::isNumber(std::string& str) {
 
 
 const bool SRTReader::check_empty(std::string_view data) {
-    /*判断改行是否为空*/
-    return data == "\r";
+    // 该函数在 readLine 中被调用，此时行尾的 \r\n 已被移除。
+    // 判断是否为空行或仅包含空白字符。
+    return data.find_first_not_of(" \t\r\n") == std::string_view::npos;
 }
 
 
@@ -82,7 +83,6 @@ void SRTReader::readLine() {
             return initTime;
         } else {
             a.Time = data;
-            a.Time.erase(a.Time.end()-1); //抹除结尾的/r
             a.index = std::nullopt;
             return initText;
         }
@@ -159,5 +159,4 @@ void SRTReader::__test_write_back() {
         }
     }
 }
-
 
